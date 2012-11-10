@@ -126,15 +126,13 @@ public class WebCrawler
 		} 
 		catch (IOException e){e.printStackTrace();}
 		
-		
 		IndexSearcher searcher = new IndexSearcher(reader);
-		QueryParser parser = new QueryParser(Version.LUCENE_40, "text", anal);
-		// TODO: quere doesnt get results
+		QueryParser parser = new QueryParser(Version.LUCENE_40,"text",anal);
+		// TODO: query doesnt get results
 		try
 		{
 			Query query = parser.parse(key);
-			System.out.println(searcher.search(query, 10).totalHits);
-		    ScoreDoc[] hits = searcher.search(query, null, 100).scoreDocs;
+		    ScoreDoc[] hits = searcher.search(query, 10).scoreDocs;
 		    System.out.println("hits: "+hits.length);
 		    for (int i = 0; i < hits.length; i++) 
 		    {
@@ -159,8 +157,9 @@ public class WebCrawler
 //			System.out.println(crawler.urlList.toString());
 //			System.out.println(crawler.indexWriter.numDocs());
 			crawler.indexWriter.commit();
-			crawler.searchIndex("text:hi");
 			crawler.indexWriter.close();
+//			crawler.indexWriter.
+			crawler.searchIndex("text:hi");
 
 		} 
 		catch (MalformedURLException e){e.printStackTrace();} 
