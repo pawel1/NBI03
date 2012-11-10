@@ -1,7 +1,6 @@
 import java.net.MalformedURLException;
 import java.net.URL;
 
-
 public class Main {
 	
 	public static void main(String[] args) 
@@ -19,5 +18,4 @@ public class Main {
 			e.printStackTrace();
 		}*/
 	}
-
 }
