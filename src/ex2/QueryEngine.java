@@ -25,6 +25,11 @@ public class QueryEngine
 	private Analyzer anal;
 	private static Version version = Version.LUCENE_40;
 
+	/**
+	 * creates a instance of the QueryEngine which can be used to search/query 
+	 * your local index
+	 * @throws IOException
+	 */
 	public QueryEngine() throws IOException
 	{
 		File workpath = new File(".");
@@ -33,6 +38,12 @@ public class QueryEngine
 		anal = new StandardAnalyzer(version);
 	}
 
+	/**
+	 * @param queryString the key or pattern you want to search for
+	 * @return a list of Documents, which containss the searched keyword
+	 * @throws IOException
+	 * @throws ParseException
+	 */
 	public List<Document> searchIndex(String queryString) throws IOException,
 			ParseException
 	{

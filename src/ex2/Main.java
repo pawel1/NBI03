@@ -29,6 +29,13 @@ public class Main
 		printSearchResults(results);
 	}
 	
+	
+	/**
+	 * used to print the results according to the exercise's second task:
+	 * URLs and their HTML document's title or body
+	 * 
+	 * @param results a list, which contains documents
+	 */
 	private static void printSearchResults (List<Document> results)
 	{
 		for (Document doc : results)

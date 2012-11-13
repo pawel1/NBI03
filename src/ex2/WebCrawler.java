@@ -41,6 +41,10 @@ public class WebCrawler
 	private Analyzer anal;
 	private static Version version = Version.LUCENE_40;
 
+	/**
+	 * creates an instance of the WebCrawler, which enables you to crawl and
+	 * index websites
+	 */
 	public WebCrawler()
 	{
 		this.patternATag = Pattern.compile(HTML_A_TAG_PATTERN);
@@ -70,6 +74,12 @@ public class WebCrawler
 		}
 	}
 
+	/**
+	 * @param url the URL, where you want to start the recursive crawling 
+	 * algorithm. While crawling an index will be created at the sources rootpath
+	 * @throws IOException
+	 * @throws URISyntaxException
+	 */
 	public void crawl (URL url) throws IOException, URISyntaxException
 	{
 		startCrawling(url);
@@ -159,6 +169,10 @@ public class WebCrawler
 		this.indexWriter.close();
 	}
 
+	/**
+	 * @param is the stream to read from
+	 * @return the stream's content as one String. Used to read HTML documents
+	 */
 	private static String convertStreamToString(InputStream is)
 	{
 		Scanner s = new Scanner(is).useDelimiter("\\A");
