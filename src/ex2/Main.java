@@ -11,7 +11,7 @@ import org.apache.lucene.queryparser.classic.ParseException;
 public class Main
 {
 	private static String START_URL = "http://www.udacity.com/cs101x/index.html";
-	private static String GOOGLE = "http://google.de";
+
 	/**
 	 * @param args
 	 * @throws IOException 
