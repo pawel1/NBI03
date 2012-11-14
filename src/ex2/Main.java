@@ -25,7 +25,8 @@ public class Main
 
 		QueryEngine qe = new QueryEngine();
 		List<Document> results = qe.searchIndex("learn*");
-
+		
+		System.out.println("Ihre Suchergebnisse: ");
 		printSearchResults(results);
 	}
 	

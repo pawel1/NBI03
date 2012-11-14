@@ -1,8 +1,11 @@
 package ex2;
 
 import java.io.File;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.Reader;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
@@ -24,14 +27,15 @@ import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
 import org.apache.lucene.util.Version;
 
+import javax.swing.text.*;
+import javax.swing.text.html.*;
+
 public class WebCrawler
 {
-	private static final String HTML_A_TAG_PATTERN = "(?i)<a([^>]+)>(.+?)</a>";
-	private static final String HTML_A_HREF_TAG_PATTERN = "\\s*(?i)href\\s*=\\s*(\"([^\"]*\")|'[^']*'|([^'\">\\s]+))";
 	private static final String BODY_PATTERN = "(?i)<body>((.|\n)*?)</body>";
 	private static final String TITLE_PATTERN = "(?i)<title>((.|\n)*?)</title>";
-	private Pattern patternATag;
-	private Pattern patternLink;
+	private static final int MAX_NUMBER_LINKS = 100;
+	
 	private Pattern patternBody;
 	private Pattern patternTitle;
 	private ArrayList<URL> urlList;
@@ -41,14 +45,8 @@ public class WebCrawler
 	private Analyzer anal;
 	private static Version version = Version.LUCENE_40;
 
-	/**
-	 * creates an instance of the WebCrawler, which enables you to crawl and
-	 * index websites
-	 */
 	public WebCrawler()
 	{
-		this.patternATag = Pattern.compile(HTML_A_TAG_PATTERN);
-		this.patternLink = Pattern.compile(HTML_A_HREF_TAG_PATTERN);
 		this.patternBody = Pattern.compile(BODY_PATTERN);
 		this.patternTitle = Pattern.compile(TITLE_PATTERN);
 		this.urlList = new ArrayList<URL>();
@@ -74,15 +72,13 @@ public class WebCrawler
 		}
 	}
 
-	/**
-	 * @param url the URL, where you want to start the recursive crawling 
-	 * algorithm. While crawling an index will be created at the sources rootpath
-	 * @throws IOException
-	 * @throws URISyntaxException
-	 */
 	public void crawl (URL url) throws IOException, URISyntaxException
 	{
-		startCrawling(url);
+		try {
+			startCrawling(url);
+		} catch(Exception e) {
+			//invalid link? ignore it
+		}
 		optimizeAndCloseWriter();
 	}
 	
@@ -92,9 +88,9 @@ public class WebCrawler
 		{
 			urlList.add(url);
 		}
-		
+
 		URI currentUri = url.toURI();
-		
+
 		URLConnection connection = url.openConnection();
 		InputStream is = connection.getInputStream();
 
@@ -103,12 +99,11 @@ public class WebCrawler
 
 		Matcher bodyMatcher = patternBody.matcher(content);
 		Matcher titleMatcher = patternTitle.matcher(content);
-		Matcher aTagMatcher = patternATag.matcher(content);
 
 		String fullBody = bodyMatcher.find() ? bodyMatcher.group() : "";
 		String body = fullBody.replaceAll("<[^>]+>", " ");
 		body = body.replaceAll("\\s+", " ").trim();
-		
+
 		String title = titleMatcher.find() ? titleMatcher.group() : "";
 
 		Document doc = new Document();
@@ -117,45 +112,71 @@ public class WebCrawler
 		doc.add(new TextField("url", url.toString(), Store.YES));
 		doc.add(new TextField("short_body", body, Store.YES));
 		indexWriter.addDocument(doc);
-		//System.out.println(doc.toString());
-		while (aTagMatcher.find())
-		{
-			String aTag = aTagMatcher.group(1);
-			Matcher hrefMatcher = patternLink.matcher(aTag);
-			// System.out.println(aTag);
-			while (hrefMatcher.find())
-			{
-				String href = hrefMatcher.group();
-				href = href.replaceAll("href=", "").trim();
-				// System.out.println(href);
-				href = href.replace("\"", "");
-				href = href.replaceAll(" ", "%20");
-				URI foundURI = new URI(href).normalize();
+		
+		
+		EditorKit kit = new HTMLEditorKit();
+		javax.swing.text.Document doc2 = kit.createDefaultDocument();
+
+		// The Document class does not yet 
+		// handle charset's properly.
+		doc2.putProperty("IgnoreCharsetDirective", Boolean.TRUE);
+		
+		try {
+
+			// Create a reader on the HTML content.
+			Reader rd = getReader(currentUri.toASCIIString());
+
+			// Parse the HTML.
+			kit.read(rd, doc2, 0);
+
+			ElementIterator it = new ElementIterator(doc2);
+			javax.swing.text.Element elem;
+			while ((elem = it.next()) != null) {
+				// recursive call of crawler, picks next unvisited url inline:
 				
-				if (!foundURI.isAbsolute())
-				{
-					foundURI = currentUri.resolve(foundURI);
-				}
+				MutableAttributeSet s = (MutableAttributeSet)
+				elem.getAttributes().getAttribute(HTML.Tag.A);
 				
-				/*
-				if (href.startsWith("/") || href.startsWith("#"))
-				{
-					href = url.getProtocol().trim()+"://"+url.getAuthority().trim()+href.trim();
-				}
-				*/
+				//System.out.println(s);
 				
-				URL finalURL = foundURI.toURL();
-				if (!urlList.contains(finalURL))
-				{
-					urlList.add(finalURL);
-				}
+				String link = currentUri.toASCIIString();
+				
+				if (s != null) {
+					if ((link = (String) s.getAttribute(HTML.Attribute.HREF)) != null) {
+						if (link.startsWith("//")) {
+							link = url.getProtocol() + ":" + link;
+						} else if (link.startsWith("/") || link.startsWith("#")) {
+							link = url.getProtocol().trim()+"://" + url.getAuthority().trim() + link.trim();
+						}
+						
+						URI foundURI = new URI(link).normalize();
+						
+						if (!foundURI.isAbsolute()) {
+							foundURI = currentUri.resolve(foundURI);
+						}
+						
+						try {
+							URL finalURL = foundURI.toURL();
+							
+							System.out.println(finalURL.toString());
+							
+							if (!urlList.contains(finalURL))
+							{
+								urlList.add(finalURL);
+							}
+						} catch (Exception e) {
+							//invalid url? ignore it
+						}
+					}
+				}			
 			}
-		}
-		// recursive call of crawler, picks next unvisited url inline:
-		if (listIndex < urlList.size())
-		{
-			startCrawling(urlList.get(listIndex++));
-		}
+			if (listIndex < urlList.size() && urlList.size() < MAX_NUMBER_LINKS)
+			{
+				startCrawling(urlList.get(listIndex++));
+			}
+		} catch (Exception e) {
+			//e.printStackTrace();
+		}		
 	}
 
 	public List<URL> getURLs()
@@ -169,14 +190,21 @@ public class WebCrawler
 		this.indexWriter.close();
 	}
 
-	/**
-	 * @param is the stream to read from
-	 * @return the stream's content as one String. Used to read HTML documents
-	 */
 	private static String convertStreamToString(InputStream is)
 	{
 		Scanner s = new Scanner(is).useDelimiter("\\A");
 		return s.hasNext() ? s.next() : "";
+	}
+	
+
+	private static Reader getReader(String uri) throws IOException {
+		
+		if (uri.startsWith("http:")) {
+			URLConnection conn = new URL(uri).openConnection();
+			return new InputStreamReader(conn.getInputStream());
+		} else {
+			return new FileReader(uri);
+		}
 	}
 
 }
